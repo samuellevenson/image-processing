@@ -1,7 +1,7 @@
 import java.awt.Color;
 import java.io.File;
 /**
- * 
+ * Comments??
  */
 public class GaussianBlur {
   public static double sd = 0.78;
@@ -25,6 +25,7 @@ public class GaussianBlur {
    * dimensions of matrix (and therefore r) must be odd
    */
   public static void makeKernel(int r) {
+    // TODO: Make r the actual radius so 2r+1 by 2r+1 matrix
     kernel = new double[r][r];
     int xmid = (int)(r/2.0);
     int ymid = xmid; //square
@@ -37,14 +38,17 @@ public class GaussianBlur {
       }
     }
     System.out.println(sum);
+    // TODO: Multiply all elements of matrix by reciprocal of sum if sum != 1
   }
   /**
    * returns blurred image, only uses red channel for now so result is also gray
    */
   public static Picture blur(Picture orig) {
     int r = kernel.length;
+    // TODO: r = (int) kernel.length / 2;
     Picture res = new Picture(orig.width(),orig.height());
     //iterates through each pixel in image exluding a border based on r
+    // TODO: Don't exclude the border
     for(int x = (int)(r/2.0); x < orig.width() - (int)(r/2.0); x++) {
       for(int y = (int)(r/2.0); y < orig.height() - (int)(r/2.0); y++) {
         //apply kernel to each pixel to get value for blurry image
@@ -53,6 +57,11 @@ public class GaussianBlur {
         int blue = 0;
         for(int dx = -(int)(r/2.0); dx <= (int)(r/2.0); dx++) {
           for(int dy = -(int)(r/2.0); dy <= (int)(r/2.0); dy++) {
+            int x1 = x + dx;
+            int y1 = y + dy;
+            if (x1 < 0 || y1 < 0 || x1 >= orig.width() || y1 >= orig.height()) {
+              continue;
+            }
             red += ((orig.get(x + dx,y + dy).getRed()) * (kernel[dx + (int)(r/2.0)][dy + (int)(r/2.0)]));
             green += ((orig.get(x + dx,y + dy).getGreen()) * (kernel[dx + (int)(r/2.0)][dy + (int)(r/2.0)]));
             blue += ((orig.get(x + dx,y + dy).getBlue()) * (kernel[dx + (int)(r/2.0)][dy + (int)(r/2.0)]));

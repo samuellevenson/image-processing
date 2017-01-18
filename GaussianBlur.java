@@ -37,8 +37,8 @@ public class GaussianBlur {
   public static void main(String[] args) {
     File in = new File(args[0]);
     orig = new Picture(in);
-    lowpass = orig;
-    highpass = orig;
+    lowpass = new Picture(orig);
+    highpass = new Picture(orig);
     makeSliders();
     updateBlur();
   }
@@ -98,8 +98,6 @@ public class GaussianBlur {
    * blur image based on updated values of sd and r and show new image
    */
   public static void updateBlur() {
-    lowpass = orig;
-    highpass = orig;
     double[][] lp = lowpassKernel();
     double[][] hp = highpassKernel();
     for(int x = 0; x < orig.width(); x++) {
@@ -115,6 +113,8 @@ public class GaussianBlur {
     printKernel(hp);
     lowpass.show();
     highpass.show();
+    lowpass.setTitle("Low pass filter");
+    highpass.setTitle("High pass filter");
   }
   /**
    * 2D gaussian function (turns out the 1D equivalent expresses the normal distribution from statistics class!)

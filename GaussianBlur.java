@@ -25,17 +25,29 @@ import javax.swing.event.ChangeListener;
  * getting pretty slow, updating image after sliding takes a noticeable amount of time 
  */
 public class GaussianBlur {
-  public static Picture orig;
-  public static Picture lowpass;
-  public static Picture highpass;
-  public static double sd = 1;
-  public static int r = 1;
+  private static Picture orig;
+  private static Picture lowpass;
+  private static Picture highpass;
+  private static double sd = 1;
+  private static int r = 1;
+  private static boolean debug = false;
   private static JFrame frame;
   private static JSlider sdSlider;
   private static JSlider rSlider;
   
   public static void main(String[] args) {
-    File in = new File(args[0]);
+    File in  = null;
+    if(args.length > 0) {
+      in = new File(args[0]);
+    }
+    else {
+      System.out.println("enter file path as a command line argument");
+    }
+    if(args.length > 1) {
+      if(args[1].equals("debug")) {
+        debug = true;
+      }
+    }
     orig = new Picture(in);
     lowpass = new Picture(orig);
     highpass = new Picture(orig);
@@ -47,16 +59,16 @@ public class GaussianBlur {
     frame = new JFrame("Sliders");
     frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
     //standard deviation slider
-    sdSlider = new JSlider(1,10,(int)(sd));
+    sdSlider = new JSlider(0,30,(int)(sd));
     sdSlider.setPaintTicks(true);
     sdSlider.setPaintLabels(true);
-    sdSlider.setMajorTickSpacing(1);
-    sdSlider.setSnapToTicks(true);
+    sdSlider.setMajorTickSpacing(5);
+    sdSlider.setSnapToTicks(false);
     sdSlider.addChangeListener(new ChangeListener() {
       public void stateChanged(ChangeEvent e) {
         JSlider source = (JSlider)e.getSource();
         if (!source.getValueIsAdjusting()) {
-          sd = (double)source.getValue();
+          sd = source.getValue()/10.0;
           updateBlur();
         }
       }
@@ -88,7 +100,7 @@ public class GaussianBlur {
     
     //put sliders into frame
     frame.setLayout(new BoxLayout(frame.getContentPane(), BoxLayout.PAGE_AXIS));
-    frame.add(new JLabel("standard deviation and radius sliders"));
+    frame.add(new JLabel("standard deviation (X10) and radius sliders"));
     frame.add(sdSlider);
     frame.add(rSlider);
     frame.pack();
@@ -98,23 +110,12 @@ public class GaussianBlur {
    * blur image based on updated values of sd and r and show new image
    */
   public static void updateBlur() {
-    double[][] lp = lowpassKernel();
-    double[][] hp = highpassKernel();
-    for(int x = 0; x < orig.width(); x++) {
-      for(int y = 0; y < orig.height(); y++) {
-        //apply kernel to each pixel to get value for new image
-        lowpass.set(x,y,applyKernel(lp, x, y));
-        highpass.set(x,y,applyKernel(hp, x, y));
-      }
-    }
-    System.out.println("sd: " + sd);
-    printKernel(lp);
-    System.out.println();
-    printKernel(hp);
+    lowPassFilter();
     lowpass.show();
+    lowpass.setTitle("lowpass");
+    highPassFilter();
     highpass.show();
-    lowpass.setTitle("Low pass filter");
-    highpass.setTitle("High pass filter");
+    highpass.setTitle("highpass");
   }
   /**
    * 2D gaussian function (turns out the 1D equivalent expresses the normal distribution from statistics class!)
@@ -122,7 +123,44 @@ public class GaussianBlur {
   public static double g(int x, int y) {
     return ((1/(2*Math.PI*sd*sd)) * Math.exp(-1*(x*x + y*y)/(2*sd*sd))); 
   }
-  
+  /**
+   * applies low pass kernel to original image to get blurred image
+   */
+  public static void lowPassFilter() {
+    double[][] lp = lowpassKernel();
+    for(int x = 0; x < orig.width(); x++) {
+      for(int y = 0; y < orig.height(); y++) {
+        //apply kernel to each pixel to get value for new image
+        lowpass.set(x,y,applyKernel(lp, x, y));
+      }
+    }
+    if(debug) {
+      System.out.println("sd: " + sd);
+      printKernel(lp);
+    }
+  }
+  /**
+   * tbd
+   */
+  public static void highPassFilter() {
+    for(int x = 0; x < orig.width(); x++) {
+      for(int y = 0; y < orig.height(); y++) {
+        int red = 25 + (int)(orig.get(x,y).getRed() - lowpass.get(x,y).getRed());
+        if(red < 0) {
+          red = 0;
+        }
+        int green = 25 + (int)(orig.get(x,y).getGreen() - lowpass.get(x,y).getGreen());
+        if(green < 0) {
+          green = 0;
+        }
+        int blue = 25 + (int)(orig.get(x,y).getBlue() - lowpass.get(x,y).getBlue());
+        if(blue < 0) {
+          blue = 0;
+        }
+        highpass.set(x,y,new Color(red,green,blue));
+      }
+    }
+  }
   /**
    * r sized matrix aprox. of gaussian function where x and y are distance from center of matrix
    * dimensions of matrix (and therefore r) must be odd
@@ -172,9 +210,11 @@ public class GaussianBlur {
         sum2 += kernel[x][y];
       }
     }
-    System.out.println("highpass:");
-    System.out.println("sum1: " + sum);
-    System.out.println("sum2: " + sum2);
+    if(debug) {
+      System.out.println("highpass:");
+      System.out.println("sum1: " + sum);
+      System.out.println("sum2: " + sum2);
+    }
     return kernel;
   }
   /**
@@ -200,81 +240,8 @@ public class GaussianBlur {
     return new Color(red,green,blue);
   }
   /**
-   * increases image size by r on all sides and pads image so that the padding contains the same
-   * value as the closest pixel in the original image
-   * not in use at the moment
+   * prints values contained in kernel
    */
-  public static Picture padEdges(Picture orig) {
-    Picture res = new Picture(orig.width() + 2*r, orig.height() + 2*r);
-    //copy into center of new image
-    for(int x = 0; x < orig.width(); x++) { 
-      for(int y = 0; y < orig.height(); y++) {
-        res.set(x+r,y+r,orig.get(x,y));
-      }
-    }
-    //pad top left corner(s)
-    for(int x = 0; x < r-1; x++) {
-      for(int y = 0; y < r-1; y++) {
-        res.set(x,y,orig.get(0,0));
-      }
-    }
-    //pad top right corner(s)
-    for(int x = res.width() - 1; x >= res.width() - r; x--) {
-      for(int y = 0; y < r-1; y++) {
-        res.set(x,y,orig.get(orig.width()-1,0));
-      }
-    }
-    //pad bottom left corner(s)
-    for(int x = 0; x < r-1; x++) {
-      for(int y = res.height() - 1; y >= res.height() - r; y--) {
-        res.set(x,y,orig.get(0,orig.height()-1));
-      }
-    }
-    //pad bottom right corners(s)
-    for(int x = res.width() - 1; x >= res.width() - r; x--) {
-      for(int y = res.height() - 1; y >= res.height() - r; y--) {
-        res.set(x,y,orig.get(orig.width()-1,orig.height()-1));
-      }
-    }
-    //pad top row(s)
-    for(int x = r; x < res.width() - r; x++) {
-      for(int y = 0; y < r; y++) {
-        res.set(x,y,orig.get(x-r,0));
-      }
-    }
-    //pad left column(s)
-    for(int x = 0; x < r; x++) {
-      for(int y = r; y < res.height() - r; y++) {
-        res.set(x,y,orig.get(0,y-r));
-      }
-    }
-    //pad bottom row(s)
-    for(int x = r; x < res.width() - r; x++) {
-      for(int y = res.height() - r; y < res.height(); y++) {
-        res.set(x,y,orig.get(x-r,orig.height()-1));
-      }
-    }
-    //pad right column(s)
-    for(int x = res.width() - r; x < res.width(); x++) {
-      for(int y = r; y < res.height() - r; y++) {
-        res.set(x,y,orig.get(orig.width()-1,y-r));
-      }
-    }
-    return res;
-  }
-  /**
-   * padding has served its purpose and shows up as black pixels in blurred image, remove it
-   * not in use right now
-   */
-  public static Picture removePadding(Picture orig) {
-    Picture res = new Picture(orig.width() - 2*r, orig.height() - 2*r);
-    for(int x = 0; x < res.width(); x++) {
-      for(int y = 0; y < res.height(); y++) {
-        res.set(x,y,orig.get(x+r,y+r));
-      }
-    }
-    return res;
-  }
   public static void printKernel(double[][] k) {
     for(double[] row: k) {
       for(double col: row) {

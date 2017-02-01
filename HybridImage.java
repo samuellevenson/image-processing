@@ -1,8 +1,10 @@
-import java.awt.Color;
 import java.io.File;
+import java.util.Hashtable;
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import javax.swing.JComponent;
 import javax.swing.BoxLayout;
 import javax.swing.JCheckBox;
 import javax.swing.JFrame;
@@ -12,15 +14,11 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 /**
- * Mixes two images together,a lowpass of one and a highpass of the other one 1/26
+ * Mixes two images together,a lowpass of one and a highpass of the other one 1/31
  * images must have the same dimensions (allowing different sized images would be possible however)
  * 
  * CHANGES: 
- * added command line argument to turn on debugging output (either "debug" or "true" as the third command line arg)
- * changed standard deviation slider to allow increments of 0.1, now displays as 10x
- * highpass filter now (seems to) work
- * added 2nd inputted image to be combined with 1st image
- * displays image combining lowpass filter of 1st and highpass filter of 2nd image
+ * fixed labels on standard deviation slider (no longer displays 10x)
  * 
  * PROBLEMS:
  * gets kinda slow when radius > 3 (apparently gaussian blur is faster if it is done seperately in the x and y direction)
@@ -42,14 +40,18 @@ public class HybridImage {
   private static JSlider rSlider;
   /**
    * initializes sliders for adjusting radius and standard deviation of blur as well as the frame they are in
-   * standard deviation is 10x on slider to allow non-integers
    */
   private static void makeSliders() {
     //frame for slider
     frame = new JFrame("Sliders");
     frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
     //standard deviation slider
+    Hashtable<Integer, JLabel> sdLabels = new Hashtable<Integer, JLabel>();
+    for(int i = 0; i <= 30; i++) {
+      sdLabels.put(i, new JLabel(Double.toString(i/10.0)));
+    }
     sdSlider = new JSlider(0,30,(int)(sd));
+    sdSlider.setLabelTable(sdLabels);
     sdSlider.setPaintTicks(true);
     sdSlider.setPaintLabels(true);
     sdSlider.setMajorTickSpacing(5);
@@ -64,7 +66,7 @@ public class HybridImage {
       }
     });
     //dimensions for standard deviation slider
-    int sliderWidth = 100;
+    int sliderWidth = 1000;
     Dimension sliderDimOrig = sdSlider.getPreferredSize();
     sliderWidth = Math.max(sliderDimOrig.width, sliderWidth);
     Dimension sliderDimNew =
@@ -90,7 +92,7 @@ public class HybridImage {
     
     //put sliders into frame
     frame.setLayout(new BoxLayout(frame.getContentPane(), BoxLayout.PAGE_AXIS));
-    frame.add(new JLabel("standard deviation (10x) and radius sliders"));
+    frame.add(new JLabel("standard deviation and radius sliders"));
     frame.add(sdSlider);
     frame.add(rSlider);
     frame.pack();

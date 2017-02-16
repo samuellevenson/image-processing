@@ -168,7 +168,7 @@ public class LocalFeatureMatching {
       for(int y = r; y < i.height() - r; y++) {
         double[][] m = autoCorrelation(x,y); //finds autocorrelation matrix
         double l = eigenVal(m); //smaller eigenvalue of matrix m
-        if(l > threshold) {
+        if(l == threshold) { //change to > in the future, == for testing
           corners.add(new int[] {x,y});
         }
       }

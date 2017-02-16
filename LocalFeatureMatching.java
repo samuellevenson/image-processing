@@ -57,11 +57,12 @@ public class LocalFeatureMatching {
   /**
    * image derivative in x direction of red channel
    */
-  public static Picture xDeriv(Picture img) {
-    Picture result = new Picture(img.width(),img.height());
-    for(int y = 0; y < img.height(); y++) {
-      for(int x = 1; x < img.width(); x++) {
-        int dx = (int)(rgbAvg(img.get(x,y)) - rgbAvg(img.get(x-1,y)));
+  public static Picture xDeriv(Picture i) {
+    Picture result = new Picture(i.width(),i.height());
+    for(int y = 0; y < i.height(); y++) {
+      for(int x = 1; x < i.width(); x++) {
+        int dx = (int)(i.get(x,y).getRed() - i.get(x-1,y).getRed());
+        System.out.println("dx : " + dx);
         dx = (dx+255)/2; //scale from range of -255,255 to range of 0,255
         result.set(x,y,new Color(dx,dx,dx));
       }
@@ -69,13 +70,13 @@ public class LocalFeatureMatching {
     return result;
   }
   /**
-   * image derivative in y direction of red channel
+   * image derivative in y direction of red channel (but its a grayscale image now so all channels should be the same)
    */
-  public static Picture yDeriv(Picture img) {
-    Picture result = new Picture(img.width(),img.height());
-    for(int x = 0; x < img.width(); x++) {
-      for(int y = 1; y < img.height(); y++) {
-        int dy = (int)(rgbAvg(img.get(x,y)) - rgbAvg(img.get(x,y-1)));
+  public static Picture yDeriv(Picture i) {
+    Picture result = new Picture(i.width(),i.height());
+    for(int x = 0; x < i.width(); x++) {
+      for(int y = 1; y < i.height(); y++) {
+        int dy = (int)(i.get(x,y).getRed() - i.get(x,y-1).getRed());
         dy = (dy+255)/2; //scale from range of -255,255 to range of 0,255
         result.set(x,y,new Color(dy,dy,dy));
       }
@@ -134,17 +135,13 @@ public class LocalFeatureMatching {
     double iySum = 0;
     for(int x = x0 - r; x < x0 + 2*r; x++) {
       for(int y = y0 - r; y < y0 + 2*r; y++) {
-        ixSum += rgbAvg(ix.get(x,y));
-        iySum += rgbAvg(iy.get(x,y));
+        System.out.println("dx2: " + ((ix.get(x,y).getRed()*2)-255));
+        ixSum += (ix.get(x,y).getRed()*2)-255;
+        iySum += (iy.get(x,y).getRed()*2)-255;
       }
     }
+    System.out.println(x0 + "," + y0 + " " + "ixSum: " + ixSum + " iySum: " + iySum);
     return new double[][] {{ixSum * ixSum, ixSum * iySum},{ixSum * iySum, iySum * iySum}};
-  }
-  /**
-   * finds the average of the red, green, and blue in a color
-   */
-  public static double rgbAvg(Color c) {
-    return (c.getRed() + c.getGreen() + c.getBlue())/3.0;
   }
   /**
    * finds the smaller of two eigenvalues of a 2x2 matrix
@@ -176,6 +173,7 @@ public class LocalFeatureMatching {
         }
       }
     }
+    //printArray(autoCorrelation(3,3));
     return corners;
   }
   /**
@@ -183,6 +181,7 @@ public class LocalFeatureMatching {
    */
   public static void drawCorners() {
     ArrayList<int[]> corners = findCorners();
+    //System.out.println(corners.size());
     Picture withCorners = new Picture(i);
     for(int i = 0; i < corners.size(); i++) {
       int x0 = corners.get(i)[0];
@@ -195,6 +194,32 @@ public class LocalFeatureMatching {
     }
     withCorners.show();
   }
+  /**
+   * displays contents of 2D array for testing
+   */
+  public static void printArray(double [][] m) {
+    for(double[] row: m) {
+      for(double col: row) {
+        System.out.print(col + " ");
+      }
+      System.out.println();
+    }
+  }
+  /**
+   * returns the grayscale equivalent of image
+   */
+  public static Picture toGrayscale(Picture p) {
+    Picture gray = new Picture(p.width(), p.height());
+    for(int x = 0; x < p.width(); x++) {
+      for(int y = 0; y < p.height(); y++) {
+        Color c = p.get(x,y);
+        double luminance = 0.2126 * c.getRed() + 0.7152 * c.getGreen() + 0.0722 * c.getBlue();
+        Color g = new Color((int)luminance,(int)luminance,(int)luminance);
+        gray.set(x,y,g);
+      }
+    }
+    return gray;
+  }
   public static void main(String[] args) {
     if(args.length == 0) {
       i = new Picture(new File("/Users/sammy/Documents/compsi/compsci12th/pictures/bicycle.bmp"));
@@ -202,6 +227,7 @@ public class LocalFeatureMatching {
     else {
       i = new Picture(new File(args[0])); 
     }
+    i = toGrayscale(i);
     i.show();
     i.setTitle("original");
     ix = gBlur(xDeriv(i),1); //image derivative in the x direction
